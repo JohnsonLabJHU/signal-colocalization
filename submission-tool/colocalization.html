@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal Colocalization</title>
+<style>
+  :root{ --maroon:#5b1a26; --bg:#fbf7f7; --line:#e7dada; --ink:#241a1c; --muted:#6b5b5e; --indigo:#3b5bdb; }
+  *{ box-sizing:border-box; }
+  body{ font-family:system-ui,-apple-system,"Segoe UI",sans-serif; margin:0; color:var(--ink); background:var(--bg); }
+  header{ background:linear-gradient(180deg,#141a2e,#20264a); color:#fff; padding:14px 20px; display:flex; align-items:center; gap:14px; }
+  header h1{ font-size:1.15rem; margin:0; font-weight:600; }
+  main{ max-width:1000px; margin:0 auto; padding:18px 20px 80px; }
+  a{ color:var(--indigo); text-decoration:none; } a:hover{ text-decoration:underline; }
+  .muted{ color:var(--muted); } .sm{ font-size:.85rem; } .hidden{ display:none; }
+  .card{ background:#fff; border:1px solid var(--line); border-radius:11px; padding:14px 16px; margin-bottom:14px; }
+  .step{ font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--indigo); font-weight:700; margin-bottom:8px; }
+  label{ display:block; font-size:.8rem; color:var(--muted); margin-bottom:3px; }
+  input,select,textarea{ padding:7px 9px; border:1px solid #cbbcbe; border-radius:7px; font-size:.9rem; font-family:inherit; }
+  input[type=text],input[type=search],textarea{ width:100%; }
+  .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+  .fld{ margin-bottom:10px; }
+  .btn{ background:var(--indigo); color:#fff; border:0; border-radius:8px; padding:9px 15px; font-weight:600; cursor:pointer; }
+  .btn.sec{ background:#fff; color:var(--indigo); border:1px solid var(--indigo); }
+  .btn.sm{ padding:5px 10px; font-size:.82rem; }
+  .btn:disabled{ opacity:.5; cursor:default; }
+  table{ width:100%; border-collapse:collapse; font-size:.86rem; }
+  th,td{ text-align:left; padding:5px 8px; border-bottom:1px solid #f0e7e8; }
+  .pick{ max-height:230px; overflow:auto; border:1px solid var(--line); border-radius:8px; padding:6px 10px; }
+  .subblk{ border:1px solid #dbe6fb; background:#f6f8ff; border-radius:8px; padding:10px 12px; margin-bottom:8px; }
+  .badge{ font-size:.72rem; padding:2px 9px; border-radius:999px; background:#e7ecfd; color:var(--indigo); }
+  .b-Queued{ background:#fff3e0; color:#8b6914; } .b-Running{ background:#e7ecfd; color:#3b5bdb; }
+  .b-Done{ background:#e6f4ea; color:#1e6b34; } .b-Failed,.b-Cancelled{ background:#fce8e6; color:#9a2a2a; }
+  #msg{ font-size:.9rem; }
+  .optbox{ border:1px solid var(--line); border-radius:10px; padding:12px 14px; background:#fcfcff; }
+  .opt-h{ font-weight:700; font-size:.95rem; margin-bottom:2px; color:#2a2a40; }
+  .opt-tag{ background:var(--indigo); color:#fff; font-size:.68rem; font-weight:700; padding:2px 8px; border-radius:999px; margin-right:6px; vertical-align:middle; }
+  .or-divider{ display:flex; align-items:center; text-align:center; color:var(--muted); font-size:.78rem; margin:12px 0; }
+  .or-divider::before,.or-divider::after{ content:""; flex:1; border-top:1px solid var(--line); }
+  .or-divider span{ padding:0 12px; text-transform:uppercase; letter-spacing:.06em; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🔬 Signal Colocalization</h1>
+</header>
+<main>
+  <p class="muted sm" style="margin-top:0"><a href="#" id="home-link">← lab home</a></p>
+  <div id="loading" class="muted">Loading…</div>
+  <div id="app" class="hidden">
+    <p class="sm muted">Segment a reference channel (Cellpose) and measure signal-channel colocalization inside each cell — per-cell and per-image (Pearson, Manders, Jaccard, positive fraction). Runs on the lab analysis platform; results are written back to the experiment and logged here, auditable and reproducible.</p>
+
+    <style>
+      #guide h3.gh{font-size:.92rem;margin:15px 0 4px;color:#3a3a55}
+      #guide .gtab{border-collapse:collapse;width:100%;margin-top:4px}
+      #guide .gtab th,#guide .gtab td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+      #guide .gtab th{background:#f2f2f8}
+      #guide ol.sm li,#guide ul.sm li{margin:4px 0}
+      #guide code{background:#ececf3;padding:0 4px;border-radius:3px}
+    </style>
+    <details id="guide" open style="margin:10px 0 14px;border:1px solid var(--line);border-radius:10px;background:#fbfbfe">
+      <summary style="cursor:pointer;padding:12px 14px;font-weight:600">📖 How to use this tool — read me first</summary>
+      <div style="padding:2px 16px 16px">
+        <p class="sm">This tool does two jobs in one pass: it <b>stores your microscopy images in the lab cloud</b> (durable, searchable, backed up) and <b>runs a colocalization analysis</b> on the GPU platform. You never attach anything in eLabFTW by hand, and you don't need the separate image-upload tool — uploading here archives the data for you too.</p>
+
+        <h3 class="gh">A · Step by step</h3>
+        <ol class="sm">
+          <li><b>Pick the experiment</b> (Step 1). Click the box to browse a dropdown of every experiment, or type part of the title or the <code>#id</code> to filter. Completed studies are hidden unless you tick "include completed studies."</li>
+          <li><b>Choose your images</b> (Step 2) — two ways. <b>Option A · Upload new images:</b> fill the session fields (tissue, modality, magnification, date), drag in a folder or browse to your files (<code>.oir</code>, <code>.czi</code>, <code>.tif</code>…), complete anything flagged in the confirm table (animal, eye/slide, Target-Fluorophore markers) so each file is renamed to the lab convention, then click <b>Upload</b> — the files are saved to the cloud archive (searchable &amp; backed up) and analyzed in one step. <b>Option B · Use images already in this experiment:</b> tick images already uploaded (from any tool) to analyze them without re-uploading. Either way the pipeline reads them from the cloud, and a file already in the archive is detected and reused — never uploaded twice. For cell-culture sessions, animal &amp; eye are skipped automatically.</li>
+          <li><b>Define what to segment and measure</b> (Step 3). A <b>reference set</b> is the cell population you outline (e.g. RBPMS to find retinal ganglion cells). A <b>signal channel</b> is what you measure <i>inside</i> those outlined cells (e.g. a dendrimer). Add as many of each as you need — every signal is measured against every reference.</li>
+          <li><b>Set options</b> (Step 4) — usually leave the defaults.</li>
+          <li><b>Submit</b>. The run is queued; the GPU platform pulls your images from the cloud, segments the cells, measures colocalization, and writes the results back automatically. Nothing else for you to do.</li>
+          <li><b>Find your results</b> under <b>"Recent analyses on this experiment"</b> at the bottom. Each run shows its status (Queued → Running → Done). When Done, click <b>open</b> — the results are attached to the experiment and to the run record: an <b>Excel workbook</b> (the numbers), <b>per-cell and per-image CSVs</b>, and <b>QC images</b> showing exactly which cells were outlined so you can sanity-check before trusting the values.</li>
+        </ol>
+
+        <h3 class="gh">B · What each setting means (and when to change it)</h3>
+        <p class="sm muted">Channels are numbered from <b>0</b>: if DAPI is the 1st channel it is channel <code>0</code>, the 2nd is <code>1</code>, and so on.</p>
+        <table class="gtab sm">
+          <tr><th>Setting</th><th>What it does</th><th>When you'd change it</th></tr>
+          <tr><td><b>Reference channel</b></td><td>The channel whose cells get outlined (segmented).</td><td>Set to the channel holding your cell-identity marker.</td></tr>
+          <tr><td><b>Cellpose model</b></td><td>The pretrained segmentation network. <code>cpdino_BRN3A</code> and <code>cpdino_RPBMS</code> are fine-tuned on retinal ganglion-cell nuclear (BRN3A/POU4F1) and cytoplasmic (RBPMS) staining; <code>cpsam_v2</code>/<code>cpdino</code> are general-purpose.</td><td>Match the model to how your marker looks. Use a retinal model for RGC markers; a general model for other cell types or stains.</td></tr>
+          <tr><td><b>Diameter (px)</b></td><td>The expected cell diameter. Blank = Cellpose estimates it automatically.</td><td>Enter a number only if auto-sizing under- or over-segments; measure a few cells in ImageJ/Fiji to get it.</td></tr>
+          <tr><td><b>Flow thr</b> (flow threshold)</td><td>How strict Cellpose is about mask shape (maximum allowed flow error). Higher = more, looser masks; lower = fewer, cleaner masks. Default 0.4.</td><td>Raise toward 0.6 if real cells are being missed; lower toward 0.2 if you get spurious blobs.</td></tr>
+          <tr><td><b>Cellprob thr</b> (cell-probability threshold)</td><td>How confident a pixel must be to count as part of a cell. Lower = larger/more masks; higher = smaller/fewer. Default 0.0.</td><td>Lower (e.g. −2) to recover dim cells; raise (e.g. +2) to drop faint/background objects.</td></tr>
+          <tr><td><b>Min size</b></td><td>Discards any mask smaller than this many pixels — a debris/noise filter.</td><td>Raise to remove small artifacts; lower if genuine small cells are being dropped.</td></tr>
+          <tr><td><b>Normalize</b></td><td>Rescales each image's intensity before segmentation so brightness differences between images don't skew the result. Usually "yes."</td><td>Turn off only if you deliberately need to segment on raw, un-scaled intensities.</td></tr>
+          <tr><td><b>Signal channel</b></td><td>The channel whose signal is measured inside each outlined cell.</td><td>Set to the channel of the marker you're testing for colocalization.</td></tr>
+          <tr><td><b>Threshold</b> (method)</td><td>How the tool decides which signal pixels are "positive." <code>otsu</code> picks the cutoff automatically (Otsu 1979); <code>percentile</code>/<code>absolute</code> let you set it; <code>none</code> counts all pixels.</td><td>Otsu is a good default. Use <code>absolute</code> when you need the exact same cutoff on every image for a fair cross-condition comparison.</td></tr>
+          <tr><td><b>Threshold value</b></td><td>The number used by the percentile/absolute methods (ignored for otsu/none).</td><td>Set it when you choose percentile or absolute.</td></tr>
+          <tr><td><b>Positive-fraction cutoff</b></td><td>The fraction of a cell's area that must be signal-positive before that whole cell is called "positive."</td><td>Raise toward 1.0 to require strong, widespread signal; lower to also count faintly-labeled cells.</td></tr>
+          <tr><td><b>Z-projection / Time / Scene index</b></td><td>For multi-dimensional files: how a z-stack is flattened (max/mean/first) and which timepoint/scene to analyze.</td><td>Change only for multi-z, time-lapse, or multi-scene images.</td></tr>
+          <tr><td><b>Compute device</b></td><td>Where segmentation runs; "auto" uses the GPU when available.</td><td>Leave on auto.</td></tr>
+        </table>
+
+        <h3 class="gh">C · Understanding the output numbers</h3>
+        <p class="sm">For each outlined cell the workbook reports colocalization between the reference and signal: <b>Manders' coefficients</b> (the fraction of one channel's signal that overlaps the other — the intuitive "how much of A sits on B"; Manders et al. 1993), <b>Pearson's correlation</b> (how the two intensities co-vary — powerful but easy to misread, so interpret alongside Manders; Dunn et al. 2011), a <b>Jaccard</b> overlap index, and the <b>positive fraction</b> of the cell. Per-image rows aggregate across all cells in that image. Always glance at the QC mask images first — a beautiful correlation is meaningless if the masks landed on the wrong structures.</p>
+
+        <p class="sm muted">References: Stringer et al., <i>Nat Methods</i> 18:100 (2021) — Cellpose; Manders et al., <i>J Microsc</i> 169:375 (1993); Costes et al., <i>Biophys J</i> 86:3993 (2004); Dunn et al., <i>Am J Physiol Cell Physiol</i> 300:C723 (2011); Aaron et al., <i>J Cell Sci</i> 131:jcs211847 (2018); Otsu, <i>IEEE Trans SMC</i> 9:62 (1979).</p>
+      </div>
+    </details>
+
+    <div class="card">
+      <div class="step">Step 1 — Experiment</div>
+      <div class="fld"><label>Find the experiment this analysis belongs to</label>
+        <input type="search" id="exp-q" placeholder="click to browse all, or type a title / #id to filter…" autocomplete="off">
+        <label class="sm" style="display:inline-flex;align-items:center;gap:5px;margin-top:4px;cursor:pointer"><input type="checkbox" id="coloc-showdone" style="width:auto;margin:0"> include completed studies</label>
+        <div id="exp-pick" class="pick hidden" style="margin-top:6px"></div></div>
+      <div id="exp-chosen" class="sm"></div>
+    </div>
+
+    <div id="rest" class="hidden">
+      <div class="card">
+        <div class="step">Step 2 — Images to analyze</div>
+        <div class="sm muted" style="margin-bottom:10px">Two ways to choose your images — <b>upload new files</b>, or <b>pick images already in this experiment's cloud archive</b>.</div>
+
+        <div class="optbox">
+          <div class="opt-h"><span class="opt-tag">Option A</span> Upload new images</div>
+          <div class="sm muted" style="margin:2px 0 8px">Saved to the lab cloud archive (searchable &amp; backed up) under the standard naming convention, and fed straight into this analysis — one step. Files already in the archive are detected and reused, not uploaded twice.</div>
+          <div id="eiu-mount"></div>
+        </div>
+
+        <div class="or-divider"><span>or</span></div>
+
+        <div class="optbox">
+          <div class="opt-h"><span class="opt-tag">Option B</span> Use images already in this experiment</div>
+          <div class="sm muted" style="margin:2px 0 8px">Every image uploaded to this experiment (from any tool) is listed below. Tick the ones to analyze — no re-uploading needed. (Used when you don't upload anything in Option A.)</div>
+          <div id="img-pick" class="pick"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="step">Step 3 — Reference sets (cells to segment)</div>
+        <div id="refs"></div>
+        <button class="btn sec sm" id="add-ref">＋ Add reference set</button>
+      </div>
+
+      <div class="card">
+        <div class="step">Step 3 — Signal channels (measured inside the masks)</div>
+        <div id="sigs"></div>
+        <button class="btn sec sm" id="add-sig">＋ Add signal channel</button>
+      </div>
+
+      <div class="card">
+        <div class="step">Step 4 — Analysis options</div>
+        <div class="row">
+          <div><label>Z-projection</label><select id="o-zproj"><option>max</option><option>mean</option><option>first</option></select></div>
+          <div><label>Time index</label><input type="number" id="o-time" min="0" value="0" style="width:90px"></div>
+          <div><label>Scene index</label><input type="number" id="o-scene" min="0" value="0" style="width:90px"></div>
+          <div><label>Compute device</label><select id="o-device"><option value="auto">auto</option><option>cuda</option><option>cpu</option><option>mps</option></select></div>
+          <div><label>Save masks</label><select id="o-masks"><option value="true">yes</option><option value="false">no</option></select></div>
+          <div><label>Save QC images</label><select id="o-qc"><option value="true">yes</option><option value="false">no</option></select></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="align-items:center">
+          <button class="btn" id="submit">Submit analysis</button>
+          <span id="msg" class="muted"></span>
+        </div>
+        <details style="margin-top:10px"><summary class="sm muted" style="cursor:pointer">Preview the job JSON</summary>
+          <pre id="jobprev" class="sm" style="background:#f7f7fb;border:1px solid var(--line);border-radius:8px;padding:10px;overflow:auto;max-height:260px"></pre></details>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="step">Recent analyses on this experiment</div>
+      <div id="runs" class="sm muted">Pick an experiment to see its analysis history.</div>
+    </div>
+  </div>
+</main>
+
+<script src="/image-uploader.js?v=3"></script>
+<script src="/results-viewer.js?v=1"></script>
+<script>
+/* ============================ CONFIGURE FOR YOUR LAB ============================
+ * Every lab-specific value lives here. See docs/adapting-to-your-lab.md.
+ * Serve this page from your ELN so it shares the authenticated browser session. */
+const CONFIG = {
+  API:             '/api/v2',                     // your ELN REST API base
+  UPLOAD_URL:      '/blobapi/upload',             // your upload-relay endpoint
+  BLOB_CONTAINER:  'microscopy',                  // object-store container / bucket
+  RUNS_STORE:      'Analysis runs',               // ELN record type holding runs
+  DATA_STORE:      'Data files',                  // ELN record type: uploaded-file archive
+  TEAM_NAME:       'your lab',                    // team/group allowed to use the tool
+  RECORD_VIEW_URL: '/database.php?mode=view&id=', // ELN "open record" URL prefix
+  HOME_URL:        '/dashboard.html'              // link back to your lab home page
+};
+/* ============================================================================= */
+const API=CONFIG.API;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const today=()=>new Date().toISOString().slice(0,10);
+async function api(method,path,body){
+  const opts={method,headers:{'Accept':'application/json'}};
+  if(body){ opts.headers['Content-Type']='application/json'; opts.body=JSON.stringify(body); }
+  const r=await fetch(API+path,opts); const t=await r.text(); let d=null; try{ d=t.trim()?JSON.parse(t):null; }catch(e){}
+  return {status:r.status,data:d,location:r.headers.get('Location')};
+}
+// orphan-proof create (POST row first, PATCH title/category after; watchdog reaps if never filled)
+async function newItem(typeId){
+  const cr=await api('POST','/items/'+typeId,{}); let nid=null;
+  try{ if(cr.location){ const t=String(cr.location).replace(/\/+$/,'').split('/').pop(); if(/^\d+$/.test(t)) nid=+t; } }catch(e){}
+  if(!nid && cr.data && cr.data.id) nid=cr.data.id;
+  if(nid) setTimeout(async()=>{ try{ const it=(await api('GET','/items/'+nid)).data; if(it && !it.category && (!it.title||/^untitled$/i.test(String(it.title).trim()))) await api('DELETE','/items/'+nid); }catch(e){} }, 25000);
+  return nid;
+}
+const meta=it=>{ try{ return JSON.parse(it.metadata||'{}'); }catch(e){ return {}; } };
+const flds=m=>(m.extra_fields)||{};
+const fv=(e,n)=>{ const f=e&&e[n]; return f?(f.value||''):''; };
+const TEAMPERM=JSON.stringify({base:30,teams:[],teamgroups:[],users:[]});
+
+const IMG_EXT=/\.(oir|czi|tif|tiff|ome\.tif|ome\.tiff)$/i;
+const MODELS=['cpdino_BRN3A','cpdino_RPBMS','cpsam_v2','cpdino'];
+let ME='', RUN_TID=null, RUN_CAT=null, EXPS=[], EXP=null, UPLOADS=[], BLOB_SOURCES=[], RUN_STAMP='', DATA_TID=null, DATA_CAT=null, ARCHIVE=[];
+let REFS=[], SIGS=[];
+
+function chan(v){ v=String(v==null?'':v).trim(); return /^\d+$/.test(v)?parseInt(v,10):v; }
+
+// ---------- reference sets ----------
+function refDefault(){ return {name:'', channel:'0', model:'cpdino_BRN3A', diameter:'', flow:'0.4', cellprob:'0.0', minsize:'15', normalize:'true'}; }
+function renderRefs(){
+  $('#refs').innerHTML=REFS.map((r,i)=>`<div class="subblk"><div class="row">
+    <div><label>Name</label><input type="text" data-rk="name" data-ri="${i}" value="${esc(r.name)}" placeholder="e.g. RBPMS" style="width:150px"></div>
+    <div><label>Reference channel</label><input type="text" data-rk="channel" data-ri="${i}" value="${esc(r.channel)}" placeholder="index or name" style="width:130px"></div>
+    <div><label>Cellpose model</label><select data-rk="model" data-ri="${i}">${MODELS.map(m=>`<option${r.model===m?' selected':''}>${m}</option>`).join('')}</select></div>
+    <div><label>Diameter (px)</label><input type="text" data-rk="diameter" data-ri="${i}" value="${esc(r.diameter)}" placeholder="auto" style="width:80px"></div>
+    <div><label>Flow thr</label><input type="text" data-rk="flow" data-ri="${i}" value="${esc(r.flow)}" style="width:70px"></div>
+    <div><label>Cellprob thr</label><input type="text" data-rk="cellprob" data-ri="${i}" value="${esc(r.cellprob)}" style="width:70px"></div>
+    <div><label>Min size</label><input type="text" data-rk="minsize" data-ri="${i}" value="${esc(r.minsize)}" style="width:70px"></div>
+    <div><label>Normalize</label><select data-rk="normalize" data-ri="${i}"><option value="true"${r.normalize==='true'?' selected':''}>yes</option><option value="false"${r.normalize==='false'?' selected':''}>no</option></select></div>
+    ${REFS.length>1?`<div><label>&nbsp;</label><br><button class="btn sec sm" data-rrm="${i}">✕</button></div>`:''}
+  </div></div>`).join('');
+  wireDyn(); previewJob();
+}
+// ---------- signal channels ----------
+function sigDefault(){ return {name:'', channel:'1', method:'otsu', value:'', posfrac:'0.8'}; }
+function renderSigs(){
+  $('#sigs').innerHTML=SIGS.map((s,i)=>`<div class="subblk"><div class="row">
+    <div><label>Name</label><input type="text" data-sk="name" data-si="${i}" value="${esc(s.name)}" placeholder="e.g. GFP" style="width:150px"></div>
+    <div><label>Signal channel</label><input type="text" data-sk="channel" data-si="${i}" value="${esc(s.channel)}" placeholder="index or name" style="width:130px"></div>
+    <div><label>Threshold</label><select data-sk="method" data-si="${i}">${['otsu','percentile','absolute','none'].map(m=>`<option${s.method===m?' selected':''}>${m}</option>`).join('')}</select></div>
+    <div><label>Threshold value</label><input type="text" data-sk="value" data-si="${i}" value="${esc(s.value)}" placeholder="pct/abs" style="width:90px"></div>
+    <div><label>Positive-fraction cutoff</label><input type="text" data-sk="posfrac" data-si="${i}" value="${esc(s.posfrac)}" style="width:90px"></div>
+    ${SIGS.length>1?`<div><label>&nbsp;</label><br><button class="btn sec sm" data-srm="${i}">✕</button></div>`:''}
+  </div></div>`).join('');
+  wireDyn(); previewJob();
+}
+function syncDyn(){
+  document.querySelectorAll('#refs [data-rk]').forEach(el=>{ if(REFS[+el.dataset.ri]) REFS[+el.dataset.ri][el.dataset.rk]=el.value; });
+  document.querySelectorAll('#sigs [data-sk]').forEach(el=>{ if(SIGS[+el.dataset.si]) SIGS[+el.dataset.si][el.dataset.sk]=el.value; });
+}
+function wireDyn(){
+  document.querySelectorAll('#refs [data-rk],#sigs [data-sk]').forEach(el=>el.oninput=el.onchange=()=>{ syncDyn(); previewJob(); });
+  document.querySelectorAll('#refs [data-rrm]').forEach(b=>b.onclick=()=>{ syncDyn(); REFS.splice(+b.dataset.rrm,1); renderRefs(); });
+  document.querySelectorAll('#sigs [data-srm]').forEach(b=>b.onclick=()=>{ syncDyn(); SIGS.splice(+b.dataset.srm,1); renderSigs(); });
+}
+
+// ---------- build the job JSON per colocalization_job.schema.json ----------
+function selectedUploadIds(){ return [...document.querySelectorAll('#img-pick [data-up]:checked')].map(c=>+c.dataset.up); }
+function buildJob(){
+  syncDyn();
+  // Primary path = files uploaded here (blob pointers). Fallback = the experiment's own attached
+  // images, referenced as experiment:<id> — NEVER bare "upload:<id>" (those 400 against eLabFTW v2,
+  // which has no top-level /uploads endpoint; the worker downloads experiment uploads entity-scoped).
+  const arch = selectedArchive();
+  const sources = BLOB_SOURCES.length ? BLOB_SOURCES.map(b=>b.pointer)
+                : (arch.length ? arch.map(a=>a.pointer)
+                : (EXP ? ['experiment:'+EXP.id] : []));
+  const numOrNull=v=>{ v=String(v==null?'':v).trim(); return v===''?null:(isNaN(+v)?null:+v); };
+  const reference_sets = REFS.filter(r=>r.name&&String(r.channel).trim()!=='').map(r=>{
+    const o={ name:r.name, channel:chan(r.channel), model:r.model||'cpdino_BRN3A',
+      diameter:numOrNull(r.diameter), flow_threshold:(numOrNull(r.flow)??0.4),
+      cellprob_threshold:(numOrNull(r.cellprob)??0.0), min_size:Math.max(0,parseInt(r.minsize,10)||15),
+      normalize:r.normalize!=='false' }; return o; });
+  const signal_channels = SIGS.filter(s=>s.name&&String(s.channel).trim()!=='').map(s=>{
+    const o={ name:s.name, channel:chan(s.channel), threshold_method:s.method||'otsu',
+      positive_fraction_cutoff:(numOrNull(s.posfrac)??0.8) };
+    const tv=numOrNull(s.value); if(tv!=null) o.threshold_value=tv; return o; });
+  return {
+    schema_version:1, sources,
+    analysis:{ output_dir:'results', reference_sets, signal_channels,
+      time_index:parseInt($('#o-time').value,10)||0, scene_index:parseInt($('#o-scene').value,10)||0,
+      z_projection:$('#o-zproj').value, device:$('#o-device').value, save_masks:$('#o-masks').value==='true' },
+    execution:{ inspect:false, save_segmentation:$('#o-qc').value==='true' }
+  };
+}
+function previewJob(){ try{ $('#jobprev').textContent=JSON.stringify(buildJob(),null,2); }catch(e){ $('#jobprev').textContent='(incomplete)'; } }
+
+// ---------- experiment picker ----------
+function isCompletedExp(e){ return /data collection complete|analysis complete/i.test(e.status_title||''); }
+function renderExpPick(q){
+  const box=$('#exp-pick'); const ql=(q||'').toLowerCase().trim();
+  const showDone=$('#coloc-showdone')&&$('#coloc-showdone').checked;
+  let list=EXPS.filter(e=>(showDone||!isCompletedExp(e)));
+  if(ql) list=list.filter(e=>String(e.id)===ql || String(e.title||'').toLowerCase().includes(ql));
+  list=list.slice().sort((a,b)=>b.id-a.id);              // newest first
+  const capped=list.slice(0,200);
+  box.innerHTML = capped.length
+    ? capped.map(e=>`<div data-eid="${e.id}" style="padding:4px 4px;cursor:pointer;border-radius:4px" onmouseover="this.style.background='#eef'" onmouseout="this.style.background=''">#${e.id} · ${esc(e.title||'(untitled)')}${isCompletedExp(e)?(' · ✔ '+esc(e.status_title)):''}</div>`).join('')
+      + (list.length>capped.length?`<div class="muted sm" style="padding:4px">…and ${list.length-capped.length} more — type to filter.</div>`:'')
+    : '<div class="muted sm" style="padding:4px">No matches.</div>';
+  box.classList.remove('hidden');
+  box.querySelectorAll('[data-eid]').forEach(d=>d.onclick=()=>chooseExp(+d.dataset.eid));
+}
+async function chooseExp(id){
+  $('#exp-pick').classList.add('hidden');
+  const full=(await api('GET','/experiments/'+id)).data; if(!full) return;
+  EXP={id:full.id, title:full.title};
+  $('#exp-q').value='#'+full.id+' · '+(full.title||'');
+  $('#exp-chosen').innerHTML='<span class="badge">experiment #'+full.id+'</span> <b>'+esc(full.title||'')+'</b>';
+  BLOB_SOURCES=[]; mountUploader();
+  $('#rest').classList.remove('hidden'); renderRuns(); previewJob();
+  loadArchive();   // list every archived image for this experiment (blob-backed, from any tool)
+}
+// A Data-file record belongs to this experiment if it was tagged with the study serial (EXP<serial>,
+// how the image tools tag it) OR the numeric id (EXP<id>, older colocalization records) — robust to both.
+function dfExpMatch(ef, exp){ const v=fv(ef,'Experiment'); const serial=(String(exp.title||'').match(/\b(\d{3,4})\b/)||[])[1]||''; return v===('EXP'+exp.id) || (!!serial && v===('EXP'+serial)); }
+async function loadArchive(){
+  ARCHIVE=[];
+  if(!EXP||DATA_CAT==null){ renderArchive(); return; }
+  try{
+    const res=await api('GET','/items?cat='+DATA_CAT+'&extended=1&limit=9999'); const items=Array.isArray(res.data)?res.data:[];
+    for(const it of items){ const ef=flds(meta(it)); if(!dfExpMatch(ef,EXP)) continue;
+      const path=fv(ef,'Blob path'); if(!path) continue;
+      const name=fv(ef,'File name')||fv(ef,'Original file name')||('item '+it.id);
+      if(!IMG_EXT.test(name) && !IMG_EXT.test(fv(ef,'Original file name'))) continue;
+      const container=fv(ef,'Blob container')||'microscopy';
+      ARCHIVE.push({recordId:it.id, name, pointer:'blob:'+container+'/'+path, gb:parseFloat(fv(ef,'File size (GB)'))||0});
+    }
+  }catch(e){}
+  ARCHIVE.sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  renderArchive();
+}
+function selectedArchive(){ return [...document.querySelectorAll('#img-pick [data-arch]:checked')].map(c=>ARCHIVE[+c.dataset.arch]).filter(Boolean); }
+function renderArchive(){
+  const box=$('#img-pick'); if(!box) return;
+  if(!ARCHIVE.length){ box.innerHTML='<div class="muted sm">No archived images found for this experiment yet — upload some above (or in the image-upload tool). You can still submit; the whole experiment is used as the source.</div>'; return; }
+  box.innerHTML=`<div class="sm muted" style="margin-bottom:4px">${ARCHIVE.length} archived image(s) for this experiment — tick the ones to analyze:</div>`+
+    ARCHIVE.map((a,i)=>`<label style="display:block;padding:2px 0"><input type="checkbox" data-arch="${i}" checked> ${esc(a.name)} <span class="muted sm">(${a.gb?a.gb.toFixed(2)+' GB':''})</span></label>`).join('');
+  box.querySelectorAll('[data-arch]').forEach(c=>c.onchange=previewJob);
+}
+
+// ---------- cloud upload (shared convention-enforcing uploader) ----------
+// Mounts the shared ElabImageUploader into Step 2. It enforces the lab naming
+// convention (confirm-and-fill), uploads bytes to the microscopy archive via the
+// /blobapi relay, and creates linked Data-file records. Its committed blob pointers
+// become this run's analysis sources.
+function mountUploader(){
+  const el=$('#eiu-mount'); if(!el) return;
+  if(!window.ElabImageUploader){ el.innerHTML='<div class="sm" style="color:#9a2a2a">Image uploader module didn’t load — reload the page.</div>'; return; }
+  el.innerHTML='';
+  ElabImageUploader.mount({
+    mount: el, api: api, me: ME,
+    experiment: { id: EXP.id, title: EXP.title||'' },
+    relayContainer: CONFIG.BLOB_CONTAINER, uploadUrl: CONFIG.UPLOAD_URL, dataStore: CONFIG.DATA_STORE,
+    onCommit: (results)=>{
+      BLOB_SOURCES = (results||[]).map(r=>({ pointer:r.pointer, name:r.canonicalName||r.file, size:0 }));
+      previewJob();
+    }
+  }).catch(e=>{ el.innerHTML='<div class="sm" style="color:#9a2a2a">Uploader failed to load: '+esc(String(e))+'</div>'; });
+}
+
+// ---------- recent runs ----------
+async function renderRuns(){
+  if(!EXP || RUN_CAT==null){ $('#runs').textContent='Pick an experiment to see its analysis history.'; return; }
+  $('#runs').textContent='Loading…';
+  const res=await api('GET','/items?cat='+RUN_CAT+'&extended=1&limit=9999'); const items=Array.isArray(res.data)?res.data:[];
+  const mine=items.filter(it=>{ const e=flds(meta(it)); return String(fv(e,'Experiment ID'))===String(EXP.id) && fv(e,'Job type')==='Colocalization'; })
+    .sort((a,b)=>String(fv(flds(meta(b)),'Date submitted')).localeCompare(String(fv(flds(meta(a)),'Date submitted'))));
+  if(!mine.length){ $('#runs').innerHTML='<span class="muted">No colocalization runs yet for this experiment.</span>'; return; }
+  const rows=mine.map(it=>{ const e=flds(meta(it)); const st=fv(e,'Status')||'Queued'; const done=/^done/i.test(st);
+    const result=esc(fv(e,'Metrics summary')||fv(e,'Result files')||fv(e,'Error')||'—');
+    return `<tr>
+      <td>${esc(fv(e,'Date submitted')||'—')}</td>
+      <td>${esc(fv(e,'Submitted by')||'—')}</td>
+      <td><span class="badge b-${esc(st.split(' ')[0])}">${esc(st)}</span></td>
+      <td class="sm">${result}</td>
+      <td class="sm">${done?`<button class="btn sec sm" data-files="${it.id}">Files ▾</button>`:'<span class="muted">—</span>'}</td>
+    </tr>
+    <tr id="fr-${it.id}" style="display:none"><td colspan="5"><div id="fm-${it.id}"></div></td></tr>`;
+  }).join('');
+  $('#runs').innerHTML='<table><tr><th>Submitted</th><th>By</th><th>Status</th><th>Result</th><th>Files</th></tr>'+rows+'</table>';
+  $('#runs').querySelectorAll('[data-files]').forEach(b=>b.onclick=async()=>{
+    const rid=b.dataset.files, fr=$('#fr-'+rid), mt=$('#fm-'+rid);
+    if(fr.style.display==='none'){ fr.style.display=''; b.textContent='Files ▴';
+      if(!mt.dataset.loaded){ mt.dataset.loaded='1';
+        if(window.ElabResults) await ElabResults.mount({mount:mt, api, entity:'items', id:rid});
+        else mt.innerHTML='<span class="muted sm">File viewer didn’t load — reload the page.</span>'; }
+    } else { fr.style.display='none'; b.textContent='Files ▾'; }
+  });
+}
+
+// ---------- submit ----------
+async function submit(){
+  const msg=$('#msg');
+  if(!EXP){ msg.style.color='#9a2a2a'; msg.textContent='Pick an experiment first.'; return; }
+  const job=buildJob();
+  if(!job.analysis.reference_sets.length){ msg.style.color='#9a2a2a'; msg.textContent='Add at least one reference set (name + channel).'; return; }
+  if(!job.analysis.signal_channels.length){ msg.style.color='#9a2a2a'; msg.textContent='Add at least one signal channel (name + channel).'; return; }
+  if(!job.sources.length){ msg.style.color='#9a2a2a'; msg.textContent='No images selected and no experiment source.'; return; }
+  $('#submit').disabled=true; msg.style.color=''; msg.textContent='Submitting…';
+  try{
+    const nid=await newItem(RUN_TID); if(!nid) throw new Error('could not create the run record');
+    const m=meta((await api('GET','/items/'+nid)).data||{}); const ef=m.extra_fields||(m.extra_fields={});
+    const set=(n,v)=>{ if(ef[n]) ef[n].value=(v==null?'':String(v)); else ef[n]={type:'text',value:(v==null?'':String(v))}; };
+    set('Job type','Colocalization'); set('Experiment ID',EXP.id); set('Experiment title',EXP.title||'');
+    set('Submitted by',ME||''); set('Date submitted',today());
+    set('Config (job JSON)',JSON.stringify(job));
+    set('Input uploads', BLOB_SOURCES.length ? BLOB_SOURCES.map(b=>b.name).join(', ') : selectedArchive().map(a=>a.name).join(', '));
+    set('Source pointers',job.sources.join(', ')); set('Status','Queued');
+    const title='Colocalization — '+(EXP.title||('exp '+EXP.id))+' — '+today();
+    const r=await api('PATCH','/items/'+nid,{title, category:RUN_CAT||undefined, canread:TEAMPERM, canwrite:TEAMPERM, metadata:JSON.stringify(m)});
+    if(r.status!==200) throw new Error('save failed ('+r.status+')');
+    try{ await api('POST','/experiments/'+EXP.id+'/items_links/'+nid); }catch(e){}
+    msg.style.color='#1e6b34'; msg.textContent='✓ Queued. The analysis platform will run it and write the results back to this experiment.';
+    renderRuns();
+  }catch(err){ msg.style.color='#9a2a2a'; msg.textContent='⚠ '+err.message; }
+  $('#submit').disabled=false;
+}
+
+// ---------- boot ----------
+async function boot(){
+  const me=(await api('GET','/users/me')).data||{}; ME=me.fullname||((me.firstname||'')+' '+(me.lastname||'')).trim();
+  // resolve the Analysis runs store
+  try{ const tl=(await api('GET','/items_types')).data||[]; const t=tl.find(x=>(x.title||'').trim().toLowerCase()===CONFIG.RUNS_STORE.toLowerCase()); RUN_TID=t?t.id:null; }catch(e){}
+  try{ const rc=(await api('GET','/teams/current/resources_categories')).data||[]; const c=rc.find(x=>(x.title||'').trim().toLowerCase()===CONFIG.RUNS_STORE.toLowerCase()); RUN_CAT=c?c.id:null; }catch(e){}
+  // Data-files store (so uploads here also become searchable, backed-up archive records)
+  try{ const tl=(await api('GET','/items_types')).data||[]; const t=tl.find(x=>(x.title||'').trim().toLowerCase()===CONFIG.DATA_STORE.toLowerCase()); DATA_TID=t?t.id:null; }catch(e){}
+  try{ const rc=(await api('GET','/teams/current/resources_categories')).data||[]; const c=rc.find(x=>(x.title||'').trim().toLowerCase()===CONFIG.DATA_STORE.toLowerCase()); DATA_CAT=c?c.id:null; }catch(e){}
+  if(!RUN_TID){ $('#loading').innerHTML='<b>Setup needed:</b> the "Analysis runs" store does not exist yet. Run elab_setup_analysis_runs.py, then reload.'; return; }
+  // load experiments for the picker (id + title + status, so completed studies can be filtered out)
+  try{ const ex=(await api('GET','/experiments?limit=9999')).data; if(Array.isArray(ex)) EXPS=ex.map(e=>({id:e.id,title:e.title,status_title:e.status_title||''})); }catch(e){}
+  if($('#coloc-showdone')) $('#coloc-showdone').onchange=()=>renderExpPick($('#exp-q').value);
+  REFS=[refDefault()]; SIGS=[sigDefault()]; renderRefs(); renderSigs();
+  $('#exp-q').oninput=()=>renderExpPick($('#exp-q').value);
+  $('#exp-q').onfocus=()=>renderExpPick($('#exp-q').value);
+  $('#add-ref').onclick=()=>{ syncDyn(); REFS.push(refDefault()); renderRefs(); };
+  $('#add-sig').onclick=()=>{ syncDyn(); SIGS.push(sigDefault()); renderSigs(); };
+  ['o-zproj','o-time','o-scene','o-device','o-masks','o-qc'].forEach(id=>{ const el=$('#'+id); if(el) el.onchange=previewJob; });
+  if($('#home-link'))$('#home-link').href=CONFIG.HOME_URL;
+  $('#submit').onclick=submit;
+  document.addEventListener('click',(e)=>{ if(!e.target.closest('#exp-q') && !e.target.closest('#exp-pick')){ const b=$('#exp-pick'); if(b) b.classList.add('hidden'); } });
+  $('#loading').classList.add('hidden'); $('#app').classList.remove('hidden');
+}
+requireLabMemberThenBoot();
+async function requireLabMemberThenBoot(){
+  try{ const r=await fetch(CONFIG.API+'/users/me',{headers:{Accept:'application/json'}});
+    if(r.ok){ const me=await r.json(); const inLab=(me.teams||[]).some(t=>String(t.name||'').trim().toLowerCase()===CONFIG.TEAM_NAME.toLowerCase());
+      if(!inLab){ document.body.innerHTML='<div style="max-width:620px;margin:14vh auto;padding:26px;font-family:system-ui"><h1 style="color:#7a2433;font-size:1.2rem">This tool is restricted</h1><p>Ask an administrator to add you to the '+esc(CONFIG.TEAM_NAME)+' team.</p></div>'; return; } } }catch(e){}
+  boot().catch(e=>{ $('#loading').textContent='Failed to load: '+e; });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+# Secrets / local config — NEVER commit
+*.env
+!*.env.template
+!*.env.example
+secrets/
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Model weights (mirror separately; do not commit large binaries)
+*.joblib
+*.npy
+*.pt
+*.pth
+models/
+gcamp-models/
+
+# Data
+*.tif
+*.tiff
+*.h5
+*.nd2
+recordings/
+outputs/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

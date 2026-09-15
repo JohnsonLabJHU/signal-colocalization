@@ -1,0 +1,85 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "Signal Colocalization Analysis Workflow — an ELN-integrated, cloud-run pipeline"
+abstract: >-
+  A self-service signal-colocalization workflow wired into an electronic lab
+  notebook (ELN). Scientists upload microscopy images through a web form; the
+  platform segments a reference cell population with Cellpose and measures
+  signal-channel colocalization (Manders, Pearson, Jaccard, positive fraction)
+  per cell and per image on cloud GPU, writing auditable results back to the
+  originating experiment.
+type: software
+authors:
+  - family-names: Zinn
+    given-names: Morgan
+    affiliation: "Wilmer Eye Institute, Johns Hopkins University School of Medicine"
+    # Author of the underlying SignalColocalization pipeline and retinal Cellpose models.
+  - family-names: Johnson
+    given-names: Thomas V.
+    affiliation: "Wilmer Eye Institute, Johns Hopkins University School of Medicine"
+    orcid: ""  # add if desired
+  - name: "Johnson Lab, Wilmer Eye Institute, Johns Hopkins University"
+license: MIT
+repository-code: "https://github.com/JohnsonLabJHU/signal-colocalization"
+url: "https://www.johnsonlabjhu.com/resources"
+keywords:
+  - colocalization
+  - Cellpose
+  - retinal ganglion cells
+  - microscopy
+  - electronic lab notebook
+  - eLabFTW
+references:
+  - type: article
+    title: "Cellpose: a generalist algorithm for cellular segmentation"
+    authors:
+      - family-names: Stringer
+        given-names: Carsen
+      - family-names: Wang
+        given-names: Tim
+      - family-names: Michaelos
+        given-names: Michalis
+      - family-names: Pachitariu
+        given-names: Marius
+    journal: "Nature Methods"
+    volume: 18
+    start: 100
+    end: 106
+    year: 2021
+    doi: "10.1038/s41592-020-01018-x"
+  - type: article
+    title: "Cellpose-SAM: superhuman generalization for cellular segmentation"
+    authors:
+      - family-names: Pachitariu
+        given-names: Marius
+      - family-names: Rariden
+        given-names: Michael
+      - family-names: Stringer
+        given-names: Carsen
+    year: 2025
+    doi: "10.1101/2025.04.28.651001"
+  - type: article
+    title: "DINOv3"
+    authors:
+      - family-names: Siméoni
+        given-names: Oriane
+      - family-names: Vo
+        given-names: Huy V.
+      - name: "et al."
+    year: 2025
+    notes: "arXiv:2508.10104. Meta DINOv3 license, not redistributed."
+  - type: article
+    title: "Measurement of co-localization of objects in dual-colour confocal images"
+    authors:
+      - family-names: Manders
+        given-names: E. M. M.
+      - family-names: Verbeek
+        given-names: F. J.
+      - family-names: Aten
+        given-names: J. A.
+    journal: "Journal of Microscopy"
+    volume: 169
+    start: 375
+    end: 382
+    year: 1993
+    notes: "Manders' coefficients. Full method reference list in ACKNOWLEDGMENTS.md."

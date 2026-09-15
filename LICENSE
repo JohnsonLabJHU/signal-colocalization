@@ -1,0 +1,39 @@
+MIT License
+
+Copyright (c) 2026 Johnson Lab, Wilmer Eye Institute, Johns Hopkins University School of Medicine
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+NOTE ON BUNDLED AND THIRD-PARTY COMPONENTS
+
+The MIT license above covers the platform / integration code authored by the
+Johnson Lab (the submission tool, the job-runner worker, and the reference
+deployment). It does NOT relicense third-party components this project depends
+on, each of which keeps its own license:
+
+  - Cellpose .......................................... BSD-3-Clause
+  - DINOv3 (Meta) ..................................... DINOv3 License (see
+        https://github.com/facebookresearch/dinov3 — installed at build time,
+        NOT redistributed here; review Meta's terms before use)
+  - GCaMP-analysis / SignalColocalization pipelines ... see each package's LICENSE
+
+When you build the container image, these dependencies are installed from their
+own sources under their own terms. See docs/adapting-to-your-lab.md and NOTICE.

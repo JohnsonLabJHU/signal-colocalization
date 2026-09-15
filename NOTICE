@@ -1,0 +1,22 @@
+Calcium Imaging (GCaMP) Analysis Workflow
+Copyright (c) 2026 Johnson Lab, Wilmer Eye Institute, Johns Hopkins University.
+
+This product includes and/or depends on third-party software, each under its own
+license:
+
+- Cellpose — BSD-3-Clause
+    https://github.com/MouseLand/cellpose
+- DINOv3 — Meta DINOv3 License (installed at build time; NOT redistributed here)
+    https://github.com/facebookresearch/dinov3
+- SignalColocalization pipeline — see the package's own LICENSE
+- scikit-learn, numpy, scipy, pandas, PyTorch, and other dependencies — see each
+  project's license.
+
+The scientific pipelines, trained models, and analysis methods were developed by
+Morgan Zinn. The ELN-integration platform (submission tool, worker, reference
+deployment) was developed by the Johnson Lab and is released under the MIT
+License (see LICENSE).
+
+When redistributing or deploying, retain the applicable notices and comply with
+each component's license — in particular the copyleft terms of Suite2p (GPL-3.0)
+and the terms of the DINOv3 license.

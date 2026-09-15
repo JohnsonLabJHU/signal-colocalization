@@ -1,0 +1,18 @@
+[Unit]
+Description=Johnson Lab ELN — analysis job dispatcher (auto-starts the GPU job for queued runs)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/elab-job-dispatcher.env
+ExecStart=/usr/bin/python3 /data/scratch/eln_job_dispatcher.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
